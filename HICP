@@ -1,0 +1,39 @@
+
+library(eurostat)
+library(ggplot2)
+library(dplyr)
+
+data <- get_eurostat("prc_hicp_manr",  geo = c("eu_countries", "-UK"))
+
+# Figure 1: Przebiegi HICP dla krajow EU
+
+countries_mapping <- data.frame(geo = c("AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "EL", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE"),
+                                country = c("Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden"))
+
+data <- data %>% left_join(countries_mapping, by = "geo")
+
+data <- data %>% filter(!is.na(country))
+
+data <- data %>% filter(coicop == "CP00")
+
+start_time <- as.Date("2000-02-01")
+end_time <- as.Date("2022-09-30")
+
+data <- data[data$time >= start_time & data$time <= end_time,]
+
+ggplot(data, aes(x = time, y = values, color = country)) +
+  geom_line() 
+
+#Figure 2: Grupowanie krajow EU na podstawie przebiegu HICP
+
+data_distance <- as.matrix(xtabs(values ~ country+time, data))
+
+distances <- dist(data_distance, method = "minkowski", p = 1.5)
+
+hc <- hclust(distances, method = "complete")
+
+plot(hc, xlab = NULL, ylab = NULL, main = NULL, sub="", ann=FALSE)
+
+rect.hclust(hc, k=4, border="red")
+
+title("Clustering countries based on HICP")
